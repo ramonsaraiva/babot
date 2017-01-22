@@ -19,19 +19,19 @@ class BairesUser(Base):
     __tablename__ = 'baires_user'
 
     id = Column(Integer, primary_key=True)
+    slack_user = Column(String)
     user = Column(String)
-    email = Column(String)
     password = Column(String)
 
-    def __init__(self, user, email, password):
+    def __init__(self, slack_user, user, password):
+        self.slack_user = slack_user
         self.user = user
-        self.email = email
         self.password = password
 
     def __repr__(self):
-        return '<BairesUser ({}) {}>'.format(email)
+        return '<BairesUser ({}) {}>'.format(self.id, self.user)
 
     @classmethod
     def get_slack_user(cls, slack_user):
         db = session()
-        return db.query(cls).filter(cls.user==slack_user).first()
+        return db.query(cls).filter(cls.slack_user==slack_user).first()

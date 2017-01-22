@@ -14,37 +14,39 @@ from models import (
 def no_baires_account(message):
     message.reply(('You don\'t have any account registered yet\n'
                    '> Send me a private message with '
-                   '`baires account email password` to create it'))
+                   '`baires account user password` to create it'))
 
 
-@respond_to(r'^baires account <mailto:(.+)\|\1> (.*)', re.IGNORECASE)
-def baires_account(message, email, password):
+@respond_to(r'^baires account (.*) (.*)', re.IGNORECASE)
+def baires_account(message, user, password):
 
-    user = BairesUser.get_slack_user(message.body['user'])
-    if user:
-        user.email = email
-        user.password = password
-        session.object_session(user).commit()
+    baires_user = BairesUser.get_slack_user(message.body['user'])
+    if baires_user:
+        baires_user.user = user
+        baires_user.password = password
+        session.object_session(baires_user).commit()
         message.reply(
-            'Your Baires account `{}` was updated successfully'.format(email))
+            'Your Baires account `{}` was updated successfully'.format(
+                baires_user.user))
         return
 
     s = session()
-    user = BairesUser(message.body['user'], email, password)
-    s.add(user)
+    baires_user = BairesUser(message.body['user'], user, password)
+    s.add(baires_user)
     s.commit()
     message.reply(
-        'Your Baires account `{}` was created successfully'.format(email))
+        'Your Baires account `{}` was created successfully'.format(
+            baires_user.user))
 
 
 @respond_to(r'^baires account$')
 @listen_to(r'^babot baires account$')
 def baires_account_info(message):
-    user = BairesUser.get_slack_user(message.body['user'])
-    if user:
+    baires_user = BairesUser.get_slack_user(message.body['user'])
+    if baires_user:
         msg =  ('Your registered Baires account: `{}`\n'
                 '> Send me a private message with '
-                '`baires account email password` to update it')
-        message.reply(msg.format(user.email))
+                '`baires account user password` to update it')
+        message.reply(msg.format(baires_user.user))
     else:
         no_baires_account(message)
