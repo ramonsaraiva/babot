@@ -7,5 +7,6 @@ ERRORS_TO = 'babot-testing'
 
 PLUGINS = [
     'slackbot.plugins',
-    'commands.subway'
+    'commands.subway',
+    'commands.timetracker'
 ]
