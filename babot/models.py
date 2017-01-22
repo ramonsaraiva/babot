@@ -30,3 +30,8 @@ class BairesUser(Base):
 
     def __repr__(self):
         return '<BairesUser ({}) {}>'.format(email)
+
+    @classmethod
+    def get_slack_user(cls, slack_user):
+        db = session()
+        return db.query(cls).filter(cls.user==slack_user).first()
