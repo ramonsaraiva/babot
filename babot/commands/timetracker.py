@@ -13,10 +13,10 @@ from models import (
 
 TT_LOGIN_URL = 'http://timetracker.bairesdev.com/default.aspx' 
 
-def no_baires_account(message):
+def no_tt_account(message):
     message.reply(('You don\'t have any account registered yet\n'
                    '> Send me a private message with '
-                   '`baires account user password` to create it'))
+                   '`tt account user password` to create it'))
 
 
 def timetracker_fetch_login_page(session):
@@ -95,8 +95,8 @@ def timetracker_check(markup):
 
 
 
-@respond_to(r'^baires account (.*) (.*)', re.IGNORECASE)
-def baires_account(message, user, password):
+@respond_to(r'^tt account (.*) (.*)', re.IGNORECASE)
+def tt_account(message, user, password):
     baires_user = BairesUser.get_slack_user(message.body['user'])
     if baires_user:
         baires_user.user = user
@@ -116,26 +116,26 @@ def baires_account(message, user, password):
             baires_user.user))
 
 
-@respond_to(r'^baires account$')
-@listen_to(r'^babot baires account$')
-def baires_account_info(message):
+@respond_to(r'^tt account$')
+@listen_to(r'^babot tt account$')
+def tt_account_info(message):
     baires_user = BairesUser.get_slack_user(message.body['user'])
     if not baires_user:
-        no_baires_account(message)
+        no_tt_account(message)
         return
 
     msg =  ('Your registered Baires account: `{}`\n'
             '> Send me a private message with '
-            '`baires account user password` to update it')
+            '`tt account user password` to update it')
     message.reply(msg.format(baires_user.user))
 
 
-@respond_to(r'^baires tt check$')
-@listen_to(r'^babot baires tt check$')
-def baires_tt_check(message):
+@respond_to(r'^tt check$')
+@listen_to(r'^babot tt check$')
+def tt_check(message):
     baires_user = BairesUser.get_slack_user(message.body['user'])
     if not baires_user:
-        no_baires_account(message)
+        no_tt_account(message)
         return
 
     session = requests.session()
@@ -143,7 +143,7 @@ def baires_tt_check(message):
 
     # login failed
     if not req:
-        no_baires_account(message)
+        no_tt_account(message)
         return
 
     markup = BS(req.text, 'html.parser')
@@ -155,7 +155,7 @@ def baires_tt_check(message):
 
     last_submit, hours_submitted = check
 
-    msg = ('> Latest TimeTracker submission: {} - {} hours - {}\n'
-           '> Tracked hours this month: {}')
+    msg = ('\n> Latest TimeTracker submission: *{}* | *{} hours* | *{}*\n'
+           '> Tracked hours this month: *{}*')
     message.reply(msg.format(
         last_submit[0], last_submit[1], last_submit[2], hours_submitted))
