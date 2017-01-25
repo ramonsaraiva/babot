@@ -14,6 +14,10 @@ from models import (
 TT_LOGIN_URL = 'http://timetracker.bairesdev.com/default.aspx' 
 
 def no_tt_account(message):
+    '''
+    Message displayed when a command that needs a
+    TimeTracker account is used by a unregistered user.
+    '''
     message.reply(('You don\'t have any account registered yet\n'
                    '> Send me a private message with '
                    '`tt account user password` to create it'))
@@ -82,8 +86,16 @@ def timetracker_login(session, baires_user):
 
 
 def timetracker_check(markup):
+    '''
+    Checks the latest TimeTracker submission and the
+    amount of hours submitted in the current month.
+    If the number of rows is <= 1, means that no hours
+    have been submitted for this month, cause the table
+    will only output one row for a generic message.
+    '''
     results_table = markup.find('table', {'class': 'tbl-respuestas'})
     rows = results_table.findAll('tr')
+
     if len(rows) > 1:
         last_submit = rows[-2].findAll('td')
         last_date = last_submit[0].find('font').text
@@ -94,9 +106,12 @@ def timetracker_check(markup):
     return None
 
 
-
 @respond_to(r'^tt account (.*) (.*)', re.IGNORECASE)
 def tt_account(message, user, password):
+    '''
+    Creates or updates a TimeTracker account
+    for a slack username.
+    '''
     baires_user = BairesUser.get_slack_user(message.body['user'])
     if baires_user:
         baires_user.user = user
@@ -119,10 +134,13 @@ def tt_account(message, user, password):
 @respond_to(r'^tt account$')
 @listen_to(r'^babot tt account$')
 def tt_account_info(message):
+    '''
+    Gives information about a TimeTracker account
+    for a slack username.
+    '''
     baires_user = BairesUser.get_slack_user(message.body['user'])
     if not baires_user:
-        no_tt_account(message)
-        return
+        return no_tt_account(message)
 
     msg =  ('Your registered Baires account: `{}`\n'
             '> Send me a private message with '
@@ -133,18 +151,20 @@ def tt_account_info(message):
 @respond_to(r'^tt check$')
 @listen_to(r'^babot tt check$')
 def tt_check(message):
+    '''
+    Checks the latest TimeTracker submission and the
+    amount of hours submitted in the current month.
+    '''
     baires_user = BairesUser.get_slack_user(message.body['user'])
     if not baires_user:
-        no_tt_account(message)
-        return
+        return no_tt_account(message)
 
     session = requests.session()
     req = timetracker_login(session, baires_user)
 
     # login failed
     if not req:
-        no_tt_account(message)
-        return
+        return no_tt_account(message)
 
     markup = BS(req.text, 'html.parser')
     check = timetracker_check(markup)
