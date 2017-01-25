@@ -12,6 +12,7 @@ from models import (
 )
 
 TT_LOGIN_URL = 'http://timetracker.bairesdev.com/default.aspx' 
+TT_TRACK_URL = 'http://timetracker.bairesdev.com/CargaTimeTracker.aspx'
 
 def no_tt_account(message):
     '''
@@ -77,12 +78,26 @@ def timetracker_login(session, baires_user):
     data[username_key] = baires_user.user
     data[password_key] = baires_user.password
 
-    req = session.post(TT_LOGIN_URL, data=data)
+    response = session.post(TT_LOGIN_URL, data=data)
 
     # ListaTimeTracker should be the redirect when logged in
-    if 'ListaTimeTracker' not in req.url:
+    if 'ListaTimeTracker' not in response.url:
         return None
-    return req
+    return response
+
+
+def login(slack_user):
+    baires_user = BairesUser.get_slack_user(slack_user)
+    if not baires_user:
+        return None
+
+    session = requests.session()
+    response = timetracker_login(session, baires_user)
+
+    if not response:
+        return None
+
+    return baires_user, session, response
 
 
 def timetracker_check(markup):
@@ -104,6 +119,20 @@ def timetracker_check(markup):
         hours_submitted = rows[-1].findAll('td')[1].text
         return (last_date, last_hours, last_description), hours_submitted
     return None
+
+
+def timetracker_focalpoints(session):
+    '''
+    Returns a list of all focal points available
+    in the track worked hours form
+    '''
+    response = session.get(TT_TRACK_URL)
+    markup = BS(response.text, 'html.parser')
+    select_name = 'ctl00$ContentPlaceHolder$idFocalPointClientDropDownList'
+
+    options = markup.find('select', {'name': select_name}).findAll('option')
+    import pdb; pdb.set_trace()
+    return ((opt['value'], opt.text) for opt in options)
 
 
 @respond_to(r'^tt account (.*) (.*)', re.IGNORECASE)
@@ -155,18 +184,13 @@ def tt_check(message):
     Checks the latest TimeTracker submission and the
     amount of hours submitted in the current month.
     '''
-    baires_user = BairesUser.get_slack_user(message.body['user'])
-    if not baires_user:
-        return no_tt_account(message)
+    login_response = login(message.body['user']) 
+    if not login_response:
+        return no_tt_account()
 
-    session = requests.session()
-    req = timetracker_login(session, baires_user)
+    user, session, response = login_response
 
-    # login failed
-    if not req:
-        return no_tt_account(message)
-
-    markup = BS(req.text, 'html.parser')
+    markup = BS(response.text, 'html.parser')
     check = timetracker_check(markup)
 
     if not check:
@@ -179,3 +203,24 @@ def tt_check(message):
            '> Tracked hours this month: *{}*')
     message.reply(msg.format(
         last_submit[0], last_submit[1], last_submit[2], hours_submitted))
+
+
+@respond_to(r'^tt focalpoints$')
+@listen_to(r'^babot tt focalpoints$')
+def tt_focalpoints(message):
+    '''
+    Returns a list of all focal points available
+    in the track worked hours form
+    '''
+    login_response = login(message.body['user'])
+    if not login_response:
+        return no_tt_account()
+
+    user, session, response = login_response
+
+    focalpoints = timetracker_focalpoints(session)
+    msg = 'Available focalpoints:\n'
+    msg += '\n'.join(
+        ['> {} => {}'.format(fp[0], fp[1]) for fp in focalpoints])
+
+    message.reply(msg)
