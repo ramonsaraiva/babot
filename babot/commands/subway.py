@@ -1,10 +1,11 @@
-from datetime import datetime
+import arrow
 
 from slackbot.bot import respond_to
 from slackbot.bot import listen_to
 
 import requests
 from bs4 import BeautifulSoup as BS
+
 
 def scrap_subway_lines():
     '''
@@ -44,7 +45,8 @@ def subway(message):
     subway_status, updated_at = scrap_subway_lines()
 
     # Highlights non-normal subway status
-    format_status = (lambda status: '`{}`'.format(status)
+    format_status = (
+        lambda status: '`{}`'.format(status)
         if status != 'Normal' else status)
 
     output = 'Subway status for now!\n> '
@@ -54,9 +56,7 @@ def subway(message):
         ['*{}* => {}'.format(subway_line[0], format_status(subway_line[1]))
             for subway_line in subway_status])
 
-    date_format = '%Y-%m-%dT%H:%M:%S-%f'
-    updated_at = datetime.strptime(updated_at, date_format)
-    output += '`\nUpdated at: {}'.format(updated_at.strftime("%d/%m %H:%M:%S"))
+    output += '`\nUpdated at: {}`'.format(arrow.get(updated_at).humanize())
 
     message.react('metro')
     message.reply(output)
