@@ -56,7 +56,7 @@ def subway(message):
         ['*{}* => {}'.format(subway_line[0], format_status(subway_line[1]))
             for subway_line in subway_status])
 
-    output += '`\nUpdated {}'.format(arrow.get(updated_at).humanize())
+    output += '\nUpdated {}'.format(arrow.get(updated_at).humanize())
 
     message.react('metro')
     message.reply(output)
